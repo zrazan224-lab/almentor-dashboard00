@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Almentor · QA Intelligence Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23E31E24'/><polygon points='50,14 86,80 14,80' fill='white'/></svg>"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════
+   ALMENTOR QA DASHBOARD  |  Dark / Light hybrid
+   Brand: #E31E24 · Glassmorphism · Syne + Manrope
+   ═══════════════════════════════════════════════ */
+:root{
+  --red:#E31E24; --red2:#ff4449; --rdim:rgba(227,30,36,.14); --rglow:rgba(227,30,36,.3);
+  --grn:#00C896; --amb:#F59E0B; --blu:#3B82F6; --pur:#8B5CF6; --cyn:#06B6D4;
+  --f-head:'Syne',sans-serif; --f-body:'Manrope',sans-serif; --f-mono:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.4,0,.2,1); --r:14px; --r-sm:8px; --r-lg:20px;
+}
+[data-theme=dark]{
+  --bg:#080A0F; --bg2:#0F1118; --bg3:#161A24;
+  --sur:rgba(255,255,255,.04); --sur2:rgba(255,255,255,.08);
+  --bdr:rgba(255,255,255,.08); --bdr2:rgba(255,255,255,.15);
+  --tx:#EDF0F8; --tx2:#8892AA; --tx3:#454F66;
+  --sh:rgba(0,0,0,.5);
+  --cgrid:rgba(255,255,255,.05); --ctick:rgba(255,255,255,.38);
+}
+[data-theme=light]{
+  --bg:#F2F4F8; --bg2:#FFFFFF; --bg3:#E8EBF2;
+  --sur:rgba(0,0,0,.03); --sur2:rgba(0,0,0,.07);
+  --bdr:rgba(0,0,0,.08); --bdr2:rgba(0,0,0,.16);
+  --tx:#0C0E14; --tx2:#505A72; --tx3:#9BA4BB;
+  --sh:rgba(0,0,0,.1);
+  --cgrid:rgba(0,0,0,.05); --ctick:rgba(0,0,0,.45);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;scroll-behavior:smooth}
+body{
+  font-family:var(--f-body);background:var(--bg);color:var(--tx);
+  min-height:100vh;line-height:1.65;
+  transition:background .3s,color .3s;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 55% at 0% 0%,rgba(227,30,36,.08),transparent 55%),
+    radial-gradient(ellipse 55% 45% at 100% 100%,rgba(59,130,246,.06),transparent 55%),
+    radial-gradient(ellipse 45% 60% at 55% 45%,rgba(0,200,150,.04),transparent 60%);
+}
+
+/* ── HEADER ─────────────────────────────────── */
+.hdr{
+  position:sticky;top:0;z-index:300;
+  background:rgba(8,10,15,.85);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--bdr);
+}
+[data-theme=light] .hdr{background:rgba(255,255,255,.88)}
+.hdr-in{
+  max-width:1560px;margin:0 auto;
+  padding:.85rem 2rem;
+  display:flex;align-items:center;justify-content:space-between;gap:1.5rem;
+}
+.brand{display:flex;align-items:center;gap:11px}
+.brand-logo{
+  width:38px;height:38px;border-radius:10px;background:var(--red);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 0 18px var(--rglow);
+}
+.brand-logo svg{width:20px;height:20px;fill:white}
+.brand-name{font-family:var(--f-head);font-weight:800;font-size:1.25rem;letter-spacing:-.03em;display:block}
+.brand-sub{font-size:.62rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--tx3);display:block;margin-top:1px}
+
+/* Sync pill */
+.sync-pill{
+  display:flex;align-items:center;gap:8px;
+  background:var(--sur2);border:1px solid var(--bdr2);
+  border-radius:999px;padding:5px 14px 5px 10px;
+}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--tx3);transition:background .3s}
+.sync-pill.live .sync-dot{background:var(--grn);animation:ldot 1.8s ease-in-out infinite}
+.sync-pill.syncing .sync-dot{background:var(--amb);animation:ldot .7s ease-in-out infinite}
+.sync-pill.error .sync-dot{background:var(--red)}
+@keyframes ldot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.7);opacity:.5}}
+.sync-label{font-family:var(--f-mono);font-size:.7rem;color:var(--tx2)}
+.sync-ago{font-family:var(--f-mono);font-size:.62rem;color:var(--tx3)}
+
+.hdr-right{display:flex;align-items:center;gap:.7rem}
+.btn-theme{
+  width:34px;height:34px;border-radius:50%;
+  background:var(--sur2);border:1px solid var(--bdr);
+  cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;
+  transition:all .2s var(--ease);
+}
+.btn-theme:hover{border-color:var(--red);transform:rotate(22deg)}
+.btn-refresh{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--f-body);font-size:.78rem;font-weight:700;
+  background:var(--rdim);border:1px solid var(--red);color:var(--red);
+  padding:7px 16px;border-radius:var(--r-sm);cursor:pointer;
+  transition:all .2s var(--ease);
+}
+.btn-refresh:hover{background:var(--red);color:#fff}
+.btn-refresh svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
+.btn-refresh.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── FILTER BAR ─────────────────────────────── */
+.fbar{
+  position:sticky;top:61px;z-index:200;
+  background:var(--bg2);border-bottom:1px solid var(--bdr);
+}
+.fbar-in{
+  max-width:1560px;margin:0 auto;padding:.7rem 2rem;
+  display:flex;align-items:flex-end;gap:1rem;flex-wrap:wrap;
+}
+.fg{display:flex;flex-direction:column;gap:3px}
+.flbl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3)}
+.fsel,.finp{
+  font-family:var(--f-body);font-size:.8rem;
+  background:var(--sur);border:1.5px solid var(--bdr);color:var(--tx);
+  border-radius:var(--r-sm);padding:6px 11px;outline:none;
+  transition:border-color .2s;cursor:pointer;min-width:148px;
+}
+.fsel:focus,.finp:focus{border-color:var(--red)}
+.fsel option{background:var(--bg2);color:var(--tx)}
+.finp{min-width:190px;cursor:text}
+.finp::placeholder{color:var(--tx3)}
+.btn-reset{
+  font-family:var(--f-body);font-size:.75rem;font-weight:700;
+  background:transparent;border:1.5px solid var(--bdr2);color:var(--tx2);
+  border-radius:var(--r-sm);padding:7px 14px;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.btn-reset:hover{border-color:var(--red);color:var(--red)}
+.fcnt{font-family:var(--f-mono);font-size:.65rem;color:var(--tx3);padding-bottom:2px}
+
+/* ── MAIN ───────────────────────────────────── */
+.main{position:relative;z-index:1;max-width:1560px;margin:0 auto;padding:2rem 2rem 3.5rem;display:flex;flex-direction:column;gap:2.2rem}
+
+/* ── NOTICE ─────────────────────────────────── */
+.notice{
+  display:flex;align-items:flex-start;gap:.9rem;
+  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);
+  border-radius:var(--r);padding:1rem 1.2rem;animation:fup .4s var(--ease);
+}
+.notice-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.notice-body{font-size:.81rem;color:var(--tx2);line-height:1.6}
+.notice-body strong{color:var(--amb)}
+.notice-body code{font-family:var(--f-mono);font-size:.72rem;background:var(--sur2);padding:1px 5px;border-radius:4px}
+
+/* ── SECTION ────────────────────────────────── */
+.sec-hd{margin-bottom:1.1rem}
+.sec-title{
+  font-family:var(--f-head);font-size:1rem;font-weight:700;
+  display:flex;align-items:center;gap:8px;letter-spacing:-.01em;
+}
+.sec-title::before{content:'';width:3px;height:17px;background:var(--red);border-radius:2px;flex-shrink:0}
+.sec-sub{font-size:.73rem;color:var(--tx3);margin-top:.2rem;padding-left:11px}
+
+/* ── KPI CARDS ──────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+.kpi{
+  background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);
+  padding:1.3rem 1.5rem;display:flex;align-items:center;gap:1rem;
+  position:relative;overflow:hidden;
+  animation:fup .5s var(--ease) both;animation-delay:var(--d,0s);
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease);
+}
+.kpi:hover{transform:translateY(-4px);box-shadow:0 18px 40px var(--sh)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--red))}
+.kpi-icon{font-size:1.55rem;flex-shrink:0}
+.kpi-lbl{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-bottom:.35rem}
+.kpi-val{font-family:var(--f-head);font-size:1.95rem;font-weight:800;line-height:1;letter-spacing:-.03em}
+.kpi-val.red{color:var(--red)} .kpi-val.grn{color:var(--grn)} .kpi-val.amb{color:var(--amb)}
+.kpi-sub{font-size:.68rem;color:var(--tx3);margin-top:.35rem}
+
+/* ── SPOTLIGHT ──────────────────────────────── */
+.sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem}
+.sp{
+  border-radius:var(--r-lg);padding:1.3rem 1.5rem;
+  border:1px solid var(--bdr);animation:fup .55s var(--ease) both;
+  transition:transform .25s var(--ease);
+}
+.sp:hover{transform:translateY(-3px)}
+.sp.bt{background:linear-gradient(135deg,rgba(0,200,150,.09),rgba(0,200,150,.02));border-color:rgba(0,200,150,.28)}
+.sp.bp{background:linear-gradient(135deg,rgba(59,130,246,.09),rgba(59,130,246,.02));border-color:rgba(59,130,246,.28)}
+.sp.wt{background:linear-gradient(135deg,rgba(245,158,11,.09),rgba(245,158,11,.02));border-color:rgba(245,158,11,.28)}
+.sp.wp{background:linear-gradient(135deg,rgba(227,30,36,.09),rgba(227,30,36,.02));border-color:rgba(227,30,36,.28)}
+.sp-badge{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-bottom:.65rem}
+.sp-name{font-family:var(--f-head);font-size:1.3rem;font-weight:800;margin-bottom:.25rem;line-height:1.2}
+.sp-stat{font-family:var(--f-mono);font-size:.7rem;color:var(--tx2)}
+
+/* ── CHARTS ─────────────────────────────────── */
+.ch-grid{display:grid;grid-template-columns:1fr 320px 1fr;gap:1rem}
+@media(max-width:1080px){.ch-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.ch-grid{grid-template-columns:1fr}}
+.ch-card{
+  background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);
+  padding:1.3rem;animation:fup .6s var(--ease) both;
+}
+.ch-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem}
+.ch-name{font-family:var(--f-head);font-size:.86rem;font-weight:700}
+.ch-pill{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:3px 9px;border-radius:999px;background:var(--rdim);color:var(--red);border:1px solid rgba(227,30,36,.25)}
+.ch-body{position:relative;height:230px}
+.ch-body canvas{max-width:100%;max-height:100%}
+.donut-mid{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.donut-mid-val{font-family:var(--f-head);font-size:1.5rem;font-weight:800;color:var(--grn);line-height:1}
+.donut-mid-lbl{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);margin-top:2px}
+
+/* ── TAB SWITCHER ────────────────────────────── */
+.tab-bar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.tab-btn{
+  font-family:var(--f-body);font-size:.8rem;font-weight:600;
+  background:var(--sur);border:1.5px solid var(--bdr);color:var(--tx2);
+  padding:7px 18px;border-radius:999px;cursor:pointer;
+  transition:all .2s var(--ease);
+}
+.tab-btn:hover{border-color:var(--red);color:var(--red)}
+.tab-btn.on{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 4px 14px var(--rglow)}
+
+/* ── TABLE ───────────────────────────────────── */
+.tbl-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);overflow:hidden;animation:fup .65s var(--ease) both}
+.tbl-toolbar{
+  padding:1.1rem 1.3rem;border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;
+}
+.tbl-title{font-family:var(--f-head);font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:.6rem}
+.tbl-chip{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:3px 8px;border-radius:999px;background:rgba(59,130,246,.1);color:var(--blu);border:1px solid rgba(59,130,246,.25)}
+.tbl-acts{display:flex;gap:.5rem}
+.btn-act{
+  font-family:var(--f-body);font-size:.74rem;font-weight:700;
+  background:var(--sur2);border:1px solid var(--bdr2);color:var(--tx2);
+  padding:6px 14px;border-radius:var(--r-sm);cursor:pointer;transition:all .2s;
+}
+.btn-act:hover{border-color:var(--red);color:var(--red)}
+.btn-act.pri{background:var(--rdim);border-color:var(--red);color:var(--red)}
+.btn-act.pri:hover{background:var(--red);color:#fff}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{
+  background:var(--bg3);color:var(--tx2);font-weight:700;font-size:.66rem;
+  text-transform:uppercase;letter-spacing:.08em;padding:10px 13px;
+  text-align:left;white-space:nowrap;cursor:pointer;user-select:none;
+  border-bottom:1px solid var(--bdr);transition:color .2s;
+}
+thead th:hover{color:var(--red)}
+thead th.sa::after{content:" ▲";font-size:.52rem} thead th.sd::after{content:" ▼";font-size:.52rem}
+tbody tr{border-bottom:1px solid var(--bdr);transition:background .15s}
+tbody tr:hover{background:var(--sur)}
+tbody td{padding:9px 13px;color:var(--tx2);font-family:var(--f-mono);font-size:.72rem;white-space:nowrap}
+td.tx{font-family:var(--f-body);font-size:.79rem;font-weight:500;color:var(--tx)}
+td.cr{color:var(--red);font-weight:700} td.am{color:var(--amb)} td.gn{color:var(--grn);font-weight:600} td.dm{color:var(--tx3)}
+.tbl-empty{text-align:center;padding:3rem;color:var(--tx3);font-size:.84rem}
+.pg{display:flex;align-items:center;justify-content:center;gap:.35rem;padding:.9rem;flex-wrap:wrap}
+.pg-btn{font-family:var(--f-mono);font-size:.67rem;background:var(--sur);border:1px solid var(--bdr);color:var(--tx2);border-radius:6px;padding:5px 9px;cursor:pointer;min-width:30px;text-align:center;transition:all .18s}
+.pg-btn:hover,.pg-btn.on{background:var(--red);color:#fff;border-color:var(--red)}
+.pg-info{font-size:.66rem;color:var(--tx3);font-family:var(--f-mono);margin:0 .4rem}
+
+/* ── INTEL ───────────────────────────────────── */
+.intel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem}
+.intel-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:1.3rem;animation:fup .6s var(--ease) both}
+.intel-hdr{display:flex;align-items:center;gap:7px;margin-bottom:1rem;padding-bottom:.85rem;border-bottom:1px solid var(--bdr)}
+.intel-icon{font-size:1.05rem}
+.intel-title{font-family:var(--f-head);font-size:.88rem;font-weight:700;flex:1}
+.intel-tag{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:999px;background:var(--rdim);color:var(--red);border:1px solid rgba(227,30,36,.2)}
+.intel-list{list-style:none;display:flex;flex-direction:column;gap:.55rem}
+.intel-list li{font-size:.8rem;color:var(--tx2);line-height:1.55;padding:.58rem .82rem;border-radius:var(--r-sm);background:var(--sur);border-left:3px solid var(--red);animation:fup .35s var(--ease) both}
+.intel-list .ph{color:var(--tx3)!important;font-style:italic;border-left-color:var(--bdr2)!important}
+
+/* ── FOOTER ─────────────────────────────────── */
+.footer{position:relative;z-index:1;max-width:1560px;margin:0 auto;padding:.9rem 2rem 1.4rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:.4rem;font-size:.68rem;color:var(--tx3);font-family:var(--f-mono);border-top:1px solid var(--bdr)}
+
+/* ── ANIMATIONS ─────────────────────────────── */
+@keyframes fup{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── RESPONSIVE ─────────────────────────────── */
+@media(max-width:840px){
+  .hdr-in,.fbar-in,.main,.footer{padding-left:1rem;padding-right:1rem}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .brand-sub,.sync-ago{display:none}
+}
+@media(max-width:480px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ═══════════════════════════════════════════ -->
+<header class="hdr">
+  <div class="hdr-in">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 20 20"><polygon points="10,2 18,18 2,18"/></svg>
+      </div>
+      <div>
+        <span class="brand-name">almentor</span>
+        <span class="brand-sub">QA Intelligence</span>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="sync-pill" id="syncPill">
+        <div class="sync-dot"></div>
+        <span class="sync-label" id="syncLabel">Connecting…</span>
+      </div>
+      <span class="sync-ago" id="syncAgo"></span>
+    </div>
+
+    <div class="hdr-right">
+      <button class="btn-theme" id="btnTheme" title="Toggle theme">☀️</button>
+      <button class="btn-refresh" id="btnRefresh" onclick="APP.refresh()">
+        <svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ══ FILTER BAR ════════════════════════════════════════ -->
+<div class="fbar">
+  <div class="fbar-in">
+    <div class="fg">
+      <label class="flbl">Country / Project</label>
+      <select class="fsel" id="fProject" onchange="APP.filter()">
+        <option value="">All</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="flbl">Team</label>
+      <select class="fsel" id="fTeam" onchange="APP.filter()">
+        <option value="">All Teams</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="flbl">Person</label>
+      <select class="fsel" id="fPerson" onchange="APP.filter()">
+        <option value="">All Members</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="flbl">Search</label>
+      <input class="finp" id="fSearch" placeholder="🔍 Search anything…" oninput="APP.filter()"/>
+    </div>
+    <button class="btn-reset" onclick="APP.reset()">✕ Reset</button>
+    <span class="fcnt" id="fcnt"></span>
+  </div>
+</div>
+
+<!-- ══ MAIN ══════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- Demo notice -->
+  <div class="notice" id="notice" style="display:none">
+    <div class="notice-icon">⚠️</div>
+    <div class="notice-body">
+      <strong>Showing demo data.</strong> To load your live sheet:
+      <em>File → Share → Publish to web → CSV</em> — or check your browser console for errors.
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <section>
+    <div class="kpi-grid">
+      <div class="kpi" style="--ac:var(--blu);--d:.05s">
+        <div class="kpi-icon">📁</div>
+        <div><div class="kpi-lbl">Projects</div><div class="kpi-val" id="kProj">—</div></div>
+      </div>
+      <div class="kpi" style="--ac:var(--pur);--d:.10s">
+        <div class="kpi-icon">🎓</div>
+        <div><div class="kpi-lbl">Courses</div><div class="kpi-val" id="kCourse">—</div></div>
+      </div>
+      <div class="kpi" style="--ac:var(--cyn);--d:.15s">
+        <div class="kpi-icon">👥</div>
+        <div><div class="kpi-lbl">Teams</div><div class="kpi-val" id="kTeams">—</div></div>
+      </div>
+      <div class="kpi" style="--ac:var(--amb);--d:.20s">
+        <div class="kpi-icon">🧑‍💼</div>
+        <div><div class="kpi-lbl">Members</div><div class="kpi-val" id="kMembers">—</div></div>
+      </div>
+      <div class="kpi" style="--ac:var(--grn);--d:.25s">
+        <div class="kpi-icon">✅</div>
+        <div><div class="kpi-lbl">Avg Quality</div><div class="kpi-val grn" id="kQual">—</div></div>
+      </div>
+      <div class="kpi" style="--ac:var(--red);--d:.30s">
+        <div class="kpi-icon">🔴</div>
+        <div>
+          <div class="kpi-lbl">Total Errors</div>
+          <div class="kpi-val red" id="kErr">—</div>
+          <div class="kpi-sub" id="kErrSub"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SPOTLIGHT -->
+  <section>
+    <div class="sec-hd">
+      <div class="sec-title">Performance Spotlight</div>
+      <div class="sec-sub">Auto-ranked by error count from live data</div>
+    </div>
+    <div class="sp-grid">
+      <div class="sp bt">
+        <div class="sp-badge">🏆 Best Team</div>
+        <div class="sp-name" id="sBT">—</div>
+        <div class="sp-stat" id="sBTS">—</div>
+      </div>
+      <div class="sp bp">
+        <div class="sp-badge">⭐ Top Performer</div>
+        <div class="sp-name" id="sBP">—</div>
+        <div class="sp-stat" id="sBPS">—</div>
+      </div>
+      <div class="sp wt">
+        <div class="sp-badge">⚠️ Needs Attention</div>
+        <div class="sp-name" id="sWT">—</div>
+        <div class="sp-stat" id="sWTS">—</div>
+      </div>
+      <div class="sp wp">
+        <div class="sp-badge">🎯 Focus Required</div>
+        <div class="sp-name" id="sWP">—</div>
+        <div class="sp-stat" id="sWPS">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHARTS -->
+  <section>
+    <div class="sec-hd">
+      <div class="sec-title">Visual Analytics</div>
+      <div class="sec-sub">All charts update instantly with filters</div>
+    </div>
+    <div class="ch-grid">
+      <div class="ch-card">
+        <div class="ch-hdr"><span class="ch-name">Errors per Team</span><span class="ch-pill">Bar</span></div>
+        <div class="ch-body"><canvas id="cBar"></canvas></div>
+      </div>
+      <div class="ch-card">
+        <div class="ch-hdr"><span class="ch-name">Major vs Minor</span><span class="ch-pill">Donut</span></div>
+        <div class="ch-body" style="position:relative">
+          <canvas id="cDonut"></canvas>
+          <div class="donut-mid">
+            <div class="donut-mid-val" id="donutVal">—</div>
+            <div class="donut-mid-lbl">Quality</div>
+          </div>
+        </div>
+      </div>
+      <div class="ch-card">
+        <div class="ch-hdr"><span class="ch-name">Quality Trend</span><span class="ch-pill">Line</span></div>
+        <div class="ch-body"><canvas id="cLine"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DATA TABLE with tab switcher -->
+  <section>
+    <div class="sec-hd">
+      <div class="sec-title">Detailed Data</div>
+      <div class="sec-sub">Switch between the two datasets. Click headers to sort.</div>
+    </div>
+    <div class="tab-bar" id="tabBar"></div>
+    <div class="tbl-card">
+      <div class="tbl-toolbar">
+        <div class="tbl-title" id="tblTitle">
+          Table
+          <span class="tbl-chip" id="tblChip">0 rows</span>
+        </div>
+        <div class="tbl-acts">
+          <button class="btn-act" onclick="APP.exportCSV()">⬇ CSV</button>
+          <button class="btn-act pri" onclick="APP.exportPDF()">⬇ PDF</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead id="tHead"></thead>
+          <tbody id="tBody"></tbody>
+        </table>
+        <div class="tbl-empty" id="tEmpty" style="display:none">No records match the filters.</div>
+      </div>
+      <div class="pg" id="tPg"></div>
+    </div>
+  </section>
+
+  <!-- INSIGHTS + RECOMMENDATIONS -->
+  <section>
+    <div class="sec-hd">
+      <div class="sec-title">Smart Intelligence</div>
+      <div class="sec-sub">Auto-generated from live data — updates with every filter change</div>
+    </div>
+    <div class="intel-grid">
+      <div class="intel-card">
+        <div class="intel-hdr">
+          <span class="intel-icon">💡</span>
+          <span class="intel-title">Insights</span>
+          <span class="intel-tag">Dynamic</span>
+        </div>
+        <ul class="intel-list" id="iList"><li class="ph">Loading…</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-hdr">
+          <span class="intel-icon">🎯</span>
+          <span class="intel-title">Recommendations</span>
+          <span class="intel-tag">Actionable</span>
+        </div>
+        <ul class="intel-list" id="rList"><li class="ph">Loading…</li></ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>Almentor QA Intelligence Dashboard</span>
+  <span id="footerTxt">Auto-refresh every 30s</span>
+</footer>
+
+<!-- ══ SCRIPT ════════════════════════════════════════════ -->
+<script>
+/* ═══════════════════════════════════════════════════════
+   ALMENTOR QA INTELLIGENCE — Full Dashboard Script
+   Data: Live Google Sheets CSV with dual-table parsing
+   Architecture: Fetch → Parse → Aggregate → Render
+   ═══════════════════════════════════════════════════════ */
+
+// ── CONFIG ───────────────────────────────────────────────
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTTRkTrRZmSP1EEaK73_OfMXmKYGmphvvayPd5CPfzIY8kpHUyXDYBjr5H_GDoiV_LlqQgHGqExhyt-/pub?output=csv';
+
+const REFRESH_MS  = 30000;
+const ROWS_PER_PG = 25;
+
+// CORS proxy chain — browser tries each until one works
+const PROXIES = [
+  u => u,                                                                // direct (localhost)
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,                // #1 most reliable
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,   // #2
+  u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, // #3
+  u => `https://thingproxy.freeboard.io/fetch/${u}`,                    // #4
+];
+
+// ── STATE ────────────────────────────────────────────────
+const S = {
+  tables:     [],   // [{name, rows:[{...}]}]  — raw parsed tables
+  filtered:   [],   // rows after filters
+  activeTab:  0,    // which table is shown
+  tblSrt:     { col:-1, dir:1 },
+  tblPg:      1,
+  charts:     {},
+  lastFetch:  null,
+};
+
+// ── FETCH ────────────────────────────────────────────────
+async function fetchCSV() {
+  const bust = SHEET_URL + '&t=' + Date.now();
+  for (const mk of PROXIES) {
+    try {
+      const r = await fetch(mk(bust), { cache:'no-store' });
+      if (!r.ok) continue;
+      const t = await r.text();
+      if (t && t.length > 80 && t.includes(',')) {
+        console.log('[Fetch] OK via:', mk(bust).slice(0,55));
+        return t;
+      }
+    } catch(_) {}
+  }
+  throw new Error('All proxies failed');
+}
+
+// ── PARSER — dual-table aware ─────────────────────────────
+function parseSheet(csv) {
+  // PapaParse handles quoted newlines, commas inside cells
+  const all = Papa.parse(csv, { skipEmptyLines: false }).data;
+
+  // ── Find section titles like "📊 Projects Error Tracker"
+  // and header rows (row with "Crit." or "Quality")
+  const sections = [];
+  let pending = null;
+
+  all.forEach((row, i) => {
+    const flat = row.join(' ');
+    const lo   = flat.toLowerCase();
+
+    // Section title rows
+    if (flat.includes('📊') || flat.includes('📈')) {
+      pending = flat.replace(/,/g,'').replace(/📊|📈/g,'').trim() || ('Table '+(sections.length+1));
+      return;
+    }
+
+    // Header row detection: has Crit + Total keywords
+    const hasCrit  = lo.includes('crit');
+    const hasTotal = lo.includes('total') || lo.includes('quality');
+    const nonEmpty = row.filter(c=>String(c).trim()).length;
+
+    if (hasCrit && hasTotal && nonEmpty >= 4) {
+      sections.push({ title: pending || ('Table '+(sections.length+1)), hdrIdx: i });
+      pending = null;
+    }
+  });
+
+  if (!sections.length) {
+    // Fallback: guess header
+    const gi = guessHeader(all);
+    sections.push({ title:'QA Data', hdrIdx: gi });
+  }
+
+  // Parse each section into typed rows
+  return sections.map((sec, si) => {
+    const endIdx = sections[si+1]?.hdrIdx ?? all.length;
+    return { name: sec.title, rows: parseBlock(all, sec.hdrIdx, endIdx) };
+  });
+}
+
+function guessHeader(rows) {
+  let best = 0, bs = 0;
+  rows.slice(0,15).forEach((row,i)=>{
+    const lo = row.join(' ').toLowerCase();
+    let s = row.filter(c=>{const v=String(c).trim();return v&&isNaN(+v.replace(/[%,]/g,''))}).length;
+    if(lo.includes('crit')||lo.includes('total')||lo.includes('project'))s+=4;
+    if(s>bs){bs=s;best=i;}
+  });
+  return best;
+}
+
+function parseBlock(all, hdrIdx, endIdx) {
+  const hRow  = all[hdrIdx]   || [];
+  const hRow2 = all[hdrIdx+1] || [];
+
+  // Detect merged-cell (two-row) header pattern
+  // Row2 is also header if it has enough text cells
+  const r2texts = hRow2.filter(c=>{ const v=String(c).trim(); return v&&isNaN(+v.replace(/[%,]/g,''))&&!v.includes('#');}).length;
+  const twoRow  = r2texts >= 3;
+
+  // Build final header labels
+  let headers;
+  let dataStart;
+
+  if (twoRow) {
+    // Row hdrIdx  = group labels:  Content, QA, Design, Media, LMS, Grand Total, Quality Rate
+    // Row hdrIdx+1 = sub-labels:   Country, Project, Team Member, Crit., Min., Total, …
+    // We'll label each col as "Group SubLabel" e.g. "Content Crit."
+    let lastGroup = '';
+    headers = hRow.map((top, i) => {
+      const t = String(top||'').replace(/[\r\n]+/g,' ').trim();
+      const s = String(hRow2[i]||'').replace(/[\r\n]+/g,' ').trim();
+      if (t) lastGroup = t;
+      // First two cols are Country, Project — keep them as-is
+      if (i < 2) return s || t;
+      return s ? (lastGroup && lastGroup!==s ? lastGroup+' '+s : s) : (t||'C'+i);
+    });
+    dataStart = hdrIdx + 2;
+  } else {
+    headers = hRow.map((c,i)=>String(c||'C'+i).replace(/[\r\n]+/g,' ').trim());
+    dataStart = hdrIdx + 1;
+  }
+
+  // ── Column semantic mapping ──────────────────────────────
+  // Returns object: { country, project, teamCols, crit, min, total, quality, person }
+  const map = buildColMap(headers);
+
+  // ── Parse data rows ──────────────────────────────────────
+  const records = [];
+  let lastCountry = '';
+  let lastProject = '';
+
+  for (let r = dataStart; r < endIdx; r++) {
+    const row = all[r] || [];
+    const str = row.join('').trim();
+    if (!str) continue;
+
+    // Skip totals / decorative
+    const flat = row.map(c=>String(c||'').trim()).join(' ');
+    if (/🏁/.test(flat)) continue;
+    if (/^\s*TOTALS?\s*$/i.test(flat.replace(/,/g,'').trim())) continue;
+
+    // Country / Project — carry forward if blank (merged-cell style)
+    const ctry = String(row[map.country]||'').trim();
+    const proj = String(row[map.project]||'').trim();
+    if (ctry) lastCountry = ctry;
+    if (proj) lastProject = proj;
+
+    if (!lastProject && !proj) continue; // truly empty row
+
+    // Sum up errors across all dept columns
+    let totalCrit = 0, totalMin = 0, totalTotal = 0;
+    const deptBreakdown = {};
+
+    map.depts.forEach(d => {
+      const c = num(row[d.crit]), m = num(row[d.min]);
+      totalCrit += c; totalMin += m;
+      deptBreakdown[d.name] = { crit:c, min:m, total:c+m };
+    });
+
+    // Grand total column (or sum)
+    const rawTotal = map.grandTotal >= 0 ? num(row[map.grandTotal]) : 0;
+    totalTotal = rawTotal || (totalCrit + totalMin);
+
+    const quality = map.quality >= 0 ? pct(row[map.quality]) : null;
+    const person  = map.person  >= 0 ? String(row[map.person]||'').trim() : '';
+
+    records.push({
+      country:  lastCountry,
+      project:  lastProject,
+      person,
+      quality,
+      crit:     totalCrit,
+      min:      totalMin,
+      total:    totalTotal,
+      depts:    deptBreakdown,
+    });
+  }
+
+  return records;
+}
+
+// ── Column map builder ────────────────────────────────────
+function buildColMap(headers) {
+  const lo  = headers.map(h => h.toLowerCase());
+  const idx = (kws) => lo.findIndex(h => kws.some(k => h.includes(k)));
+
+  // Detect department groups from headers
+  // Pattern: "Content Crit.", "Content Min.", "Content Total", "QA Crit.", etc.
+  const deptNames = [...new Set(
+    headers
+      .map(h => {
+        const m = h.match(/^(Content|QA|Design|Media|LMS|VO)\s+/i);
+        return m ? m[1] : null;
+      })
+      .filter(Boolean)
+  )];
+
+  const depts = deptNames.map(name => {
+    const prefix = name.toLowerCase();
+    return {
+      name,
+      crit: lo.findIndex(h => h.startsWith(prefix) && h.includes('crit')),
+      min:  lo.findIndex(h => h.startsWith(prefix) && (h.includes('min') && !h.includes('country'))),
+    };
+  }).filter(d => d.crit >= 0 || d.min >= 0);
+
+  // If no dept columns found, fallback to single crit/min
+  if (!depts.length) {
+    const ci = idx(['crit','critical','major']);
+    const mi = idx(['min.','minor']);
+    if (ci >= 0 || mi >= 0) depts.push({ name:'Errors', crit:ci, min:mi });
+  }
+
+  return {
+    country:    Math.max(idx(['country','region','location']), 0),
+    project:    lo.findIndex(h => h==='project' || h==='course' || h==='module' || h==='title') >= 0
+                  ? lo.findIndex(h => h==='project'||h==='course'||h==='module'||h==='title')
+                  : 1,
+    person:     idx(['team member','member','person','name','assigned','reviewer']),
+    grandTotal: lo.findIndex(h => h.includes('grand total') || h === 'total'),
+    quality:    lo.findIndex(h => h.includes('quality') || h.includes('q %') || h === '%'),
+    depts,
+  };
+}
+
+// ── SAFE NUMBER HELPERS ───────────────────────────────────
+const num = v => { const n=parseFloat(String(v||'').replace(/[^0-9.\-]/g,'')); return isNaN(n)?0:n; };
+const pct = v => { const s=String(v||'').replace('%','').trim(); const n=parseFloat(s); return isNaN(n)?null:n; };
+const safe = v => { const s=String(v||'').trim(); return (!s||s.includes('#'))?'—':s; };
+
+// ── AGGREGATION ───────────────────────────────────────────
+function aggregate(records) {
+  const projects=new Set(), courses=new Set(), teams=new Set(), persons=new Set();
+  let totCrit=0, totMin=0, totTotal=0, qSum=0, qCnt=0;
+  const byTeam={}, byPerson={};
+
+  records.forEach(r => {
+    if (r.project) projects.add(r.project);
+    if (r.person)  { persons.add(r.person); }
+    totCrit  += r.crit  || 0;
+    totMin   += r.min   || 0;
+    totTotal += r.total || 0;
+    if (r.quality != null && r.quality > 0) { qSum += r.quality; qCnt++; }
+
+    // Teams from dept breakdown
+    Object.entries(r.depts || {}).forEach(([team, vals]) => {
+      teams.add(team);
+      if (!byTeam[team]) byTeam[team]={ name:team, crit:0, min:0, total:0, qSum:0, qCnt:0, rows:0 };
+      byTeam[team].crit  += vals.crit;
+      byTeam[team].min   += vals.min;
+      byTeam[team].total += vals.total;
+      byTeam[team].rows++;
+    });
+
+    // By person
+    if (r.person) {
+      if (!byPerson[r.person]) byPerson[r.person]={ name:r.person, crit:0, min:0, total:0, qSum:0, qCnt:0, rows:0 };
+      byPerson[r.person].crit  += r.crit||0;
+      byPerson[r.person].min   += r.min||0;
+      byPerson[r.person].total += r.total||0;
+      if (r.quality>0){ byPerson[r.person].qSum+=r.quality; byPerson[r.person].qCnt++; }
+      byPerson[r.person].rows++;
+    }
+  });
+
+  const fin = o => { o.avgQ = o.qCnt>0 ? o.qSum/o.qCnt : 0; };
+  Object.values(byTeam).forEach(fin);
+  Object.values(byPerson).forEach(fin);
+
+  const tArr = Object.values(byTeam).sort((a,b)=>a.total-b.total);
+  const pArr = Object.values(byPerson).sort((a,b)=>a.total-b.total);
+
+  return {
+    nProjects: projects.size, nCourses: courses.size,
+    nTeams: teams.size, nPersons: persons.size,
+    totCrit, totMin, totTotal,
+    avgQ: qCnt>0 ? (qSum/qCnt).toFixed(1) : '—',
+    byTeam, byPerson,
+    tArr, pArr,
+    bestTeam:   tArr[0]||null,
+    worstTeam:  tArr[tArr.length-1]||null,
+    bestPerson: pArr[0]||null,
+    worstPerson:pArr[pArr.length-1]||null,
+  };
+}
+
+// ── INSIGHTS ENGINE ───────────────────────────────────────
+function genInsights(agg, recs) {
+  const {totCrit,totMin,totTotal,avgQ,bestTeam,worstTeam,tArr,pArr} = agg;
+  const out = [];
+
+  if (!recs.length) { out.push('⚠️ No data loaded yet.'); return out; }
+  if (totTotal===0) { out.push('✅ Zero errors across all records — perfect quality!'); return out; }
+
+  const mp = totTotal>0 ? ((totCrit/totTotal)*100).toFixed(1) : 0;
+  out.push(`📊 ${totTotal.toLocaleString()} total errors: ${totCrit} critical (${mp}%) · ${totMin} minor.`);
+
+  const q = parseFloat(avgQ);
+  if (!isNaN(q)) {
+    if (q>=99)      out.push(`🏆 Average quality ${avgQ}% — exceeds the 99% benchmark. Excellent work!`);
+    else if (q>=95) out.push(`✅ Average quality ${avgQ}% — good performance, 99%+ is the stretch target.`);
+    else            out.push(`⚠️ Average quality ${avgQ}% — below the 95% floor. Immediate action required.`);
+  }
+
+  if (bestTeam && worstTeam && bestTeam.name!==worstTeam.name) {
+    const gap = worstTeam.total - bestTeam.total;
+    out.push(`📈 Performance gap: "${worstTeam.name}" has ${gap} more errors than leading team "${bestTeam.name}".`);
+  }
+
+  if (parseFloat(mp)>40) out.push(`🔴 Critical errors are ${mp}% of total — implement mandatory pre-delivery review.`);
+
+  if (tArr.length>1) {
+    const top=[...tArr].sort((a,b)=>b.total-a.total)[0];
+    out.push(`🔍 "${top.name}" department has the highest error count: ${top.total} errors.`);
+  }
+
+  const zeroRecs = recs.filter(r=>(r.total||0)===0);
+  out.push(`🌟 ${zeroRecs.length}/${recs.length} records (${((zeroRecs.length/recs.length)*100).toFixed(0)}%) have zero errors.`);
+
+  const stars = pArr.filter(p=>p.total===0&&p.rows>=2);
+  if (stars.length) out.push(`⭐ Zero-error performers: ${stars.slice(0,4).map(p=>p.name).join(', ')}.`);
+
+  return out;
+}
+
+function genRecs(agg) {
+  const {totCrit,totTotal,avgQ,worstTeam,worstPerson,bestTeam,nTeams} = agg;
+  const out = [];
+  const mp = totTotal>0?(totCrit/totTotal)*100:0;
+  const q  = parseFloat(avgQ)||0;
+
+  if (worstTeam?.total>3)   out.push(`📋 Schedule an urgent QA review for "${worstTeam.name}" — ${worstTeam.total} errors is above threshold.`);
+  if (mp>40)                out.push('🚨 Implement mandatory pre-submission checklists to cut critical errors below 30%.');
+  if (q>0&&q<95)            out.push(`📉 Quality at ${avgQ}% is below the 95% target. Consider launching a QA excellence sprint.`);
+  if (bestTeam&&worstTeam&&bestTeam.name!==worstTeam.name)
+    out.push(`🔄 Arrange knowledge-transfer sessions: "${bestTeam.name}" best practices → "${worstTeam.name}".`);
+  if (worstPerson?.total>2) out.push(`🎓 Assign mentoring or targeted training to "${worstPerson.name}".`);
+  if (nTeams>1)             out.push('📊 Hold weekly cross-team error reviews to share learnings and stay consistent.');
+  if (!out.length) {
+    out.push('✅ All metrics look healthy! Document current processes as best-practice SOPs.');
+    out.push('🚀 Consider raising the quality bar to 99.5%+ and tracking progress weekly.');
+  }
+  out.push('🔁 Ensure team members update the sheet daily for accurate real-time insights.');
+  return out;
+}
+
+// ── CHARTS ───────────────────────────────────────────────
+const CHARTS = {
+  inst:{},
+  dark:()=> document.documentElement.dataset.theme!=='light',
+
+  pal(){ return { red:'#E31E24',amb:'#F59E0B',grn:'#00C896',blu:'#3B82F6',
+    grid:this.dark()?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)',
+    tick:this.dark()?'rgba(255,255,255,.4)':'rgba(0,0,0,.45)',
+    ttBg:this.dark()?'rgba(8,10,15,.97)':'rgba(255,255,255,.97)',
+    ttTx:this.dark()?'#EDF0F8':'#0C0E14',
+    ttBd:this.dark()?'rgba(255,255,255,.09)':'rgba(0,0,0,.09)',
+    bg2: this.dark()?'#0F1118':'#FFFFFF',
+  };},
+
+  base(){ const p=this.pal(); return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{labels:{color:p.tick,font:{family:'JetBrains Mono',size:11},usePointStyle:true,padding:12}},
+      tooltip:{backgroundColor:p.ttBg,titleColor:p.ttTx,bodyColor:p.ttTx,borderColor:p.ttBd,borderWidth:1,padding:11,cornerRadius:9,
+        titleFont:{family:'Syne',size:12,weight:'bold'},bodyFont:{family:'JetBrains Mono',size:11}},
+    },
+    scales:{
+      x:{grid:{color:p.grid},ticks:{color:p.tick,font:{family:'JetBrains Mono',size:10}}},
+      y:{beginAtZero:true,grid:{color:p.grid},ticks:{color:p.tick,font:{family:'JetBrains Mono',size:10}}},
+    },
+  };},
+
+  destroy(){ Object.values(this.inst).forEach(c=>{try{c.destroy()}catch(_){}});this.inst={}; },
+
+  bar(agg){
+    const el=document.getElementById('cBar'); if(!el)return;
+    const p=this.pal();
+    const teams=agg.tArr.filter(t=>t.rows>0).slice(0,12);
+    const opts=this.base(); opts.plugins.legend.display=true;
+    if(this.inst.bar)this.inst.bar.destroy();
+    this.inst.bar=new Chart(el.getContext('2d'),{
+      type:'bar',
+      data:{labels:teams.map(t=>t.name),datasets:[
+        {label:'Critical',data:teams.map(t=>t.crit),backgroundColor:p.red,borderRadius:5},
+        {label:'Minor',   data:teams.map(t=>t.min), backgroundColor:p.amb,borderRadius:5},
+      ]},
+      options:opts,
+    });
+  },
+
+  donut(agg){
+    const el=document.getElementById('cDonut'); if(!el)return;
+    const p=this.pal();
+    const {totCrit,totMin,totTotal,avgQ}=agg;
+    document.getElementById('donutVal').textContent = avgQ!=='—' ? avgQ+'%' : '—';
+    if(this.inst.donut)this.inst.donut.destroy();
+    this.inst.donut=new Chart(el.getContext('2d'),{
+      type:'doughnut',
+      data:{labels:['Critical','Minor'],datasets:[{
+        data:[totCrit,totMin],
+        backgroundColor:[p.red,p.amb],
+        borderWidth:2,borderColor:p.bg2,hoverOffset:9,
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+        plugins:{
+          legend:{position:'bottom',labels:{color:p.tick,font:{family:'JetBrains Mono',size:10},usePointStyle:true,padding:10}},
+          tooltip:{callbacks:{label:c=>{const pct=totTotal>0?((c.raw/totTotal)*100).toFixed(1):0;return ` ${c.label}: ${c.raw} (${pct}%)`;}},
+            backgroundColor:p.ttBg,titleColor:p.ttTx,bodyColor:p.ttTx,borderColor:p.ttBd,borderWidth:1,bodyFont:{family:'JetBrains Mono',size:11}},
+        },
+      },
+    });
+  },
+
+  line(recs){
+    const el=document.getElementById('cLine'); if(!el)return;
+    const p=this.pal();
+    const wq=recs.filter(r=>r.quality>0).slice(0,45);
+    if(!wq.length){if(this.inst.line)this.inst.line.destroy();return;}
+    const cv=el.getContext('2d');
+    const gr=cv.createLinearGradient(0,0,0,230);
+    gr.addColorStop(0,'rgba(0,200,150,.28)'); gr.addColorStop(1,'rgba(0,200,150,.01)');
+    const data=wq.map(r=>r.quality);
+    const opts=this.base(); opts.plugins.legend.display=false;
+    opts.scales.y={...opts.scales.y,min:Math.max(0,Math.min(...data)-5),max:100};
+    if(this.inst.line)this.inst.line.destroy();
+    this.inst.line=new Chart(cv,{type:'line',
+      data:{labels:wq.map((r,i)=>(r.project||('#'+(i+1))).slice(0,16)),datasets:[{
+        label:'Quality %',data,fill:true,backgroundColor:gr,borderColor:p.grn,tension:.4,
+        pointBackgroundColor:p.grn,pointRadius:3,pointHoverRadius:6,
+      }]},
+      options:opts,
+    });
+  },
+
+  all(agg,recs){ this.bar(agg); this.donut(agg); this.line(recs); },
+};
+
+// ── UI HELPERS ───────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const set = (id,v) => { const e=$(id); if(e) e.textContent=v; };
+const list = (id,items) => { const e=$(id); if(e) e.innerHTML=items.map(i=>`<li>${i}</li>`).join(''); };
+
+function populateFilters(recs) {
+  const proj = [...new Set(recs.map(r=>r.project).filter(Boolean))].sort();
+  const team = [...new Set(Object.keys(recs.flatMap ? recs.flatMap(r=>Object.keys(r.depts||{})) : []))].sort();
+  const pers = [...new Set(recs.map(r=>r.person).filter(Boolean))].sort();
+
+  // Use all records' dept keys for team filter
+  const allTeams = [...new Set(S.tables.flatMap(t=>t.rows.flatMap(r=>Object.keys(r.depts||{}))))].sort();
+
+  fill('fProject', proj,    'All Projects');
+  fill('fTeam',    allTeams,'All Teams');
+  fill('fPerson',  pers,    'All Members');
+}
+
+function fill(id, vals, placeholder) {
+  const el=$(id); if(!el)return;
+  const cur=el.value;
+  el.innerHTML=`<option value="">${placeholder}</option>`;
+  vals.forEach(v=>{ const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o); });
+  if(vals.includes(cur)) el.value=cur;
+}
+
+// ── TAB BAR ──────────────────────────────────────────────
+function buildTabBar() {
+  const bar=$('tabBar'); if(!bar)return;
+  bar.innerHTML='';
+  S.tables.forEach((t,i)=>{
+    const btn=document.createElement('button');
+    btn.className='tab-btn'+(i===S.activeTab?' on':'');
+    btn.textContent=t.name + ` (${t.rows.length})`;
+    btn.onclick=()=>{ S.activeTab=i; S.tblPg=1; buildTabBar(); renderTable(); };
+    bar.appendChild(btn);
+  });
+}
+
+// ── TABLE ────────────────────────────────────────────────
+const TCOLS = ['Country','Project','Person','Critical','Minor','Total','Quality %'];
+
+function renderTable() {
+  const recs = S.filtered;
+  const { col, dir } = S.tblSrt;
+  const thead=$('tHead'), tbody=$('tBody'), empty=$('tEmpty'), pg=$('tPg');
+  const chip=$('tblChip'), title=$('tblTitle');
+
+  // Title
+  const tabName = S.tables[S.activeTab]?.name || 'Table';
+  if(title) { title.childNodes[0].textContent = tabName+' '; }
+  if(chip)  chip.textContent = recs.length+' rows';
+
+  // Head
+  thead.innerHTML='';
+  const tr=document.createElement('tr');
+  TCOLS.forEach((c,i)=>{
+    const th=document.createElement('th'); th.textContent=c;
+    if(col===i) th.className=dir===1?'sa':'sd';
+    th.onclick=()=>{
+      S.tblSrt.dir = S.tblSrt.col===i ? S.tblSrt.dir*-1 : 1;
+      S.tblSrt.col = i; S.tblPg=1;
+      renderTable();
+    };
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr);
+
+  if(!recs.length){ empty.style.display='block'; renderPg(0); tbody.innerHTML=''; return; }
+  empty.style.display='none';
+
+  // Sort
+  const sorted=[...recs].sort((a,b)=>{
+    const vs = r => [r.country,r.project,r.person,r.crit,r.min,r.total,r.quality??-1][col] ?? '';
+    const av=vs(a), bv=vs(b);
+    const an=+String(av).replace(/[^0-9.]/g,''), bn=+String(bv).replace(/[^0-9.]/g,'');
+    return (!isNaN(an)&&!isNaN(bn)?(an-bn):String(av).localeCompare(String(bv)))*dir;
+  });
+
+  const start=(S.tblPg-1)*ROWS_PER_PG;
+  tbody.innerHTML='';
+  sorted.slice(start, start+ROWS_PER_PG).forEach(r=>{
+    const tr=document.createElement('tr');
+    const q=r.quality;
+    const vals=[r.country||'—',r.project||'—',r.person||'—',r.crit,r.min,r.total,q!=null?q.toFixed(1)+'%':'—'];
+    vals.forEach((v,i)=>{
+      const td=document.createElement('td'); td.textContent=String(v);
+      if(i<3)          td.className='tx';
+      else if(i===3)   td.className=v>0?'cr':'dm';
+      else if(i===4)   td.className=v>0?'am':'dm';
+      else if(i===5)   td.className=v===0?'dm':'';
+      else { const qn=parseFloat(v); td.className=isNaN(qn)?'dm':qn>=99?'gn':qn<95?'cr':'am'; }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  renderPg(recs.length);
+}
+
+function renderPg(total) {
+  const el=$('tPg'); if(!el)return;
+  const pages=Math.ceil(total/ROWS_PER_PG), cur=S.tblPg;
+  el.innerHTML='';
+  if(pages<=1)return;
+  const info=document.createElement('span');info.className='pg-info';info.textContent=total.toLocaleString()+' rows';el.appendChild(info);
+  const mk=(lbl,p)=>{ const b=document.createElement('button');b.className='pg-btn'+(p===cur?' on':'');b.textContent=lbl;b.onclick=()=>{S.tblPg=p;renderTable();};el.appendChild(b); };
+  const w=2;
+  if(cur>1)mk('«',1);
+  for(let p=Math.max(1,cur-w);p<=Math.min(pages,cur+w);p++)mk(p,p);
+  if(cur<pages)mk('»',pages);
+}
+
+// ── SYNC STATUS ───────────────────────────────────────────
+function syncStatus(state) { // 'syncing'|'live'|'demo'|'error'
+  const pill=$('syncPill'), lbl=$('syncLabel');
+  if(!pill)return;
+  pill.className='sync-pill '+state;
+  lbl.textContent = state==='syncing'?'Syncing…':state==='live'?'Live':state==='demo'?'Demo Mode':'Error';
+}
+
+function updateAgo() {
+  const el=$('syncAgo'); if(!el||!S.lastFetch)return;
+  const s=Math.round((Date.now()-S.lastFetch)/1000);
+  el.textContent = s<60 ? `· ${s}s ago` : `· ${Math.floor(s/60)}m ago`;
+}
+
+// ── APP CONTROLLER ───────────────────────────────────────
+const APP = {
+
+  async load() {
+    syncStatus('syncing');
+    const btn=$('btnRefresh'); if(btn)btn.classList.add('spin');
+    try {
+      const csv = await fetchCSV();
+      S.tables = parseSheet(csv);
+      console.log('[Parse] Tables found:', S.tables.map(t=>t.name+':'+t.rows.length));
+      S.lastFetch = Date.now();
+
+      const allRecs = S.tables.flatMap(t=>t.rows);
+      populateFilters(allRecs);
+      syncStatus('live');
+      $('notice').style.display='none';
+    } catch(e) {
+      console.warn('[Load] Fetch failed:', e.message, '— using demo data');
+      S.tables = [{ name:'Projects (Demo)', rows:demoProjects() }, { name:'AI Courses (Demo)', rows:demoCourses() }];
+      S.lastFetch = Date.now();
+      populateFilters(S.tables.flatMap(t=>t.rows));
+      syncStatus('demo');
+      $('notice').style.display='flex';
+    } finally {
+      if(btn)btn.classList.remove('spin');
+    }
+    this.filter();
+  },
+
+  filter() {
+    const proj   = $('fProject')?.value||'';
+    const team   = $('fTeam')?.value||'';
+    const person = $('fPerson')?.value||'';
+    const q      = ($('fSearch')?.value||'').toLowerCase().trim();
+
+    // Collect rows from active tab
+    const tabRecs = S.tables[S.activeTab]?.rows || [];
+
+    S.filtered = tabRecs.filter(r => {
+      if (proj   && r.project!==proj)   return false;
+      if (person && r.person!==person)  return false;
+      if (team   && !r.depts?.[team])   return false;
+      if (q) {
+        const blob = [r.country,r.project,r.person,...Object.keys(r.depts||{})].join(' ').toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const cnt = $('fcnt');
+    if(cnt) cnt.textContent = S.filtered.length+' / '+tabRecs.length+' rows';
+
+    const allRecs = S.tables.flatMap(t=>t.rows); // for global metrics
+    const agg = aggregate(team ? S.filtered : allRecs); // global agg for KPIs/charts
+    const filtAgg = aggregate(S.filtered);
+
+    // Metrics & spotlight from ALL data (not just active tab)
+    const globalAgg = aggregate(allRecs);
+    set('kProj',    globalAgg.nProjects);
+    set('kCourse',  S.tables[1]?.rows.length || 0); // AI courses count
+    set('kTeams',   globalAgg.nTeams);
+    set('kMembers', globalAgg.nPersons);
+    set('kQual',    globalAgg.avgQ + (globalAgg.avgQ!=='—'?'%':''));
+    set('kErr',     globalAgg.totTotal.toLocaleString());
+    set('kErrSub',  globalAgg.totCrit+' critical · '+globalAgg.totMin+' minor');
+
+    const fmt = o => o ? `${o.total} errors · ${o.avgQ>0?o.avgQ.toFixed(1)+'% quality':'—'}` : '—';
+    set('sBT',  globalAgg.bestTeam?.name   ||'N/A'); set('sBTS', fmt(globalAgg.bestTeam));
+    set('sBP',  globalAgg.bestPerson?.name ||'N/A'); set('sBPS', fmt(globalAgg.bestPerson));
+    set('sWT',  globalAgg.worstTeam?.name  ||'N/A'); set('sWTS', fmt(globalAgg.worstTeam));
+    set('sWP',  globalAgg.worstPerson?.name||'N/A'); set('sWPS', fmt(globalAgg.worstPerson));
+
+    buildTabBar();
+    renderTable();
+    CHARTS.all(filtAgg, S.filtered);
+    list('iList', genInsights(globalAgg, allRecs));
+    list('rList', genRecs(globalAgg));
+    updateAgo();
+  },
+
+  reset() {
+    ['fProject','fTeam','fPerson'].forEach(id=>{ const e=$(id);if(e)e.value=''; });
+    const s=$('fSearch');if(s)s.value='';
+    this.filter();
+  },
+
+  refresh() { this.load(); },
+
+  exportCSV() {
+    const hdr=['Country','Project','Person','Critical','Minor','Total','Quality%'];
+    const body=S.filtered.map(r=>[r.country,r.project,r.person,r.crit,r.min,r.total,r.quality!=null?r.quality.toFixed(1):'']);
+    const csv=[hdr,...body].map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`almentor_qa_${new Date().toISOString().slice(0,10)}.csv`});
+    a.click();URL.revokeObjectURL(a.href);
+  },
+
+  exportPDF() {
+    const rows=S.filtered.slice(0,500);
+    const win=window.open('','_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Almentor QA Report</title>
+    <style>body{font-family:Arial,sans-serif;padding:20px}h1{color:#E31E24}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#E31E24;color:#fff;padding:8px 10px;text-align:left}td{padding:7px 10px;border-bottom:1px solid #eee}tr:nth-child(even){background:#f7f7f7}.btn{background:#E31E24;color:#fff;border:none;padding:8px 18px;border-radius:5px;cursor:pointer;margin-bottom:14px}@media print{.btn{display:none}}</style></head>
+    <body><h1>Almentor QA Intelligence Report</h1><p style="color:#666;font-size:13px">${new Date().toLocaleString()} · ${rows.length} records</p>
+    <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button>
+    <table><thead><tr><th>Country</th><th>Project</th><th>Person</th><th>Critical</th><th>Minor</th><th>Total</th><th>Quality%</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${r.country||''}</td><td>${r.project||''}</td><td>${r.person||''}</td><td style="color:${r.crit>0?'#E31E24':'#888'}">${r.crit}</td><td>${r.min}</td><td>${r.total}</td><td>${r.quality!=null?r.quality.toFixed(1)+'%':'—'}</td></tr>`).join('')}
+    </tbody></table></body></html>`);
+    win.document.close();
+  },
+
+  initTheme() {
+    const saved=localStorage.getItem('almentor-theme')||'dark';
+    document.documentElement.dataset.theme=saved;
+    $('btnTheme').textContent=saved==='dark'?'☀️':'🌙';
+    $('btnTheme').onclick=()=>{
+      const n=document.documentElement.dataset.theme==='dark'?'light':'dark';
+      document.documentElement.dataset.theme=n;
+      localStorage.setItem('almentor-theme',n);
+      $('btnTheme').textContent=n==='dark'?'☀️':'🌙';
+      const agg=aggregate(S.tables.flatMap(t=>t.rows));
+      CHARTS.all(agg,S.filtered);
+    };
+  },
+
+  init() {
+    this.initTheme();
+    this.load();
+    setInterval(()=>this.load(), REFRESH_MS);
+    setInterval(updateAgo, 5000);
+    const ft=$('footerTxt'); if(ft) ft.textContent='Auto-refresh every '+(REFRESH_MS/1000)+'s · '+SHEET_URL.slice(0,55)+'…';
+  },
+};
+
+// ── DEMO DATA ────────────────────────────────────────────
+function demoProjects() {
+  const make=(country,project,depts,quality)=>{
+    const d={};let tc=0,tm=0;
+    depts.forEach(([name,c,m])=>{d[name]={crit:c,min:m,total:c+m};tc+=c;tm+=m;});
+    return {country,project,person:'',quality,crit:tc,min:tm,total:tc+tm,depts:d};
+  };
+  return [
+    make('KSA',  'Alinma Bank',      [['Content',7,1],['QA',5,0],['Design',5,0],['LMS',18,0]], 95.08),
+    make('KSA',  'Financial Academy',[['Content',0,0],['QA',0,0],['Design',0,0],['LMS',0,0]],  100),
+    make('KSA',  'SIRC',             [['Content',0,0],['QA',0,0],['Design',0,0],['LMS',0,0]],  100),
+    make('Egypt','GIZ',              [['Content',0,0],['QA',0,0],['Design',0,0],['LMS',0,0]],  100),
+    make('Oman', 'MOJ',              [['Content',0,0],['QA',0,0],['Design',0,0],['LMS',0,0]],  100),
+    make('Oman', 'OmanTel',          [['Content',0,0],['QA',0,0],['Design',0,0],['LMS',0,0]],  100),
+    make('Oman', 'Oman Vision',      [['Content',0,0],['QA',0,0],['Design',0,0],['LMS',0,0]],  100),
+    make('Oman', 'Sohar Bank',       [['Content',0,0],['QA',0,0],['Design',0,0],['LMS',0,0]],  100),
+    make('UAE',  'SHERAA',           [['Content',0,0],['QA',0,0],['Design',0,0],['LMS',0,0]],  100),
+  ];
+}
+function demoCourses() {
+  const mk=(project,person,depts,quality)=>{
+    const d={};let tc=0,tm=0;
+    depts.forEach(([name,c,m])=>{d[name]={crit:c,min:m,total:c+m};tc+=c;tm+=m;});
+    return {country:'',project,person,quality,crit:tc,min:tm,total:tc+tm,depts:d};
+  };
+  return [
+    mk('Version Management',              'Lamis',[['Content',1,1],['QA',1,1],['Media',6,2]],96),
+    mk('Data Integration',                'Lamis',[['Content',0,0],['QA',0,0],['Media',0,0]],100),
+    mk('Outcome Monitoring',              'Lamis',[['Content',0,0],['QA',0,0],['Media',0,0]],100),
+    mk('Budget Planning',                 'Lamis',[['Content',0,0],['QA',0,0],['Media',0,0]],100),
+    mk('Intuition-based Decision Making', 'Lamis',[['Content',0,0],['QA',0,0],['Media',0,0]],100),
+    mk('Forecast Development',            'Lamis',[['Content',0,0],['QA',0,0],['Media',0,0]],100),
+    mk('Research Design Development',     'Lamis',[['Content',0,0],['QA',0,0],['Media',0,0]],100),
+    mk('Objection Handling',              'Lamis',[['Content',0,0],['QA',0,0],['Media',0,0]],100),
+    mk('Risk Identification',             'Lamis',[['Content',0,0],['QA',0,0],['Media',0,0]],100),
+    mk('Model Evaluation',                'Lamis',[['Content',0,0],['QA',0,0],['Media',0,0]],100),
+  ];
+}
+
+// ── BOOT ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', ()=> APP.init());
+</script>
+</body>
+</html>
